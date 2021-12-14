@@ -221,7 +221,6 @@ class Application(QtWidgets.QMainWindow):
         if K >= len(self.ContorBox):
             return
         self.FouriePoint = self.fourie.reconstract(K)
-        self.FullFouriePoint = self.fourie.reconstract(K=len(self.ContorBox))
         self.fouriePlot()
 
     def fouriePlot(self):
