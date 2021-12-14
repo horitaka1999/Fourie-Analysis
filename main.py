@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 from matplotlib import patches
 import SimpleITK as sitk
 import os
+import csv
 from Fourie import FourieMaster
 from scipy.spatial import ConvexHull
 from PyQt5.QtCore import Qt
@@ -82,6 +83,7 @@ class Application(QtWidgets.QMainWindow):
         self.NiiList.currentIndexChanged.connect(lambda: self.showNii(self.NiiList.currentText()))
         self.ContorList.currentIndexChanged.connect(lambda: self.showContor(self.ContorList.currentText()))
         self.Button.clicked.connect(self.AnalizeFourie)
+        self.saveButton.clicked.connect(self.SaveAsCsv)
         
     def initUI(self):
         self.resize(1400,800)#ウィンドウサイズの変更
@@ -114,7 +116,8 @@ class Application(QtWidgets.QMainWindow):
         self.Button = QtWidgets.QPushButton('Fourie',self)
         self.Button.setGeometry(820,10,100,30)
         
-
+        self.saveButton = QtWidgets.QPushButton('save',self)
+        self.saveButton.setGeometry(1000,10,100,30)
 
         self.kParameterWidget = QtWidgets.QLineEdit(self)
         self.kParameterWidget.setGeometry(950,10,30,30)
@@ -137,7 +140,6 @@ class Application(QtWidgets.QMainWindow):
     def initContorFigure(self):
         self.ContorFigure = plt.figure.Figure()
         self.ContorFigureCanvas = FigureCanvas(self.ContorFigure)
-        self.ContorFigureCanvas.mpl_connect('motion_notify_event',self.mouse_move)
         self.ContorFigureLayout.addWidget(self.ContorFigureCanvas)
         self.contor_axes = self.ContorFigure.add_subplot(1,1,1)
         self.contor_axes.set_aspect('equal')
@@ -209,10 +211,12 @@ class Application(QtWidgets.QMainWindow):
         self.updateContorFigure()
 
     def AnalizeFourie(self):
+        #length = self.ContorData.culcArclength()
         if self.Loaded == False:
             return
         self.fourie = FourieMaster(self.ContorBox)
         self.fourie.constMatrix()
+        self.fourieMatrix = self.fourie.matrix
         K = int(self.kParameterWidget.text())
         if K >= len(self.ContorBox):
             return
@@ -228,78 +232,14 @@ class Application(QtWidgets.QMainWindow):
         self.contor_axes.axis('off')
         self.updateContorFigure()
 
-
-    def drawPolygon(self):
+    def SaveAsCsv(self):
+        file_name, filters = QFileDialog.getSaveFileName(filter="CSV files (*.csv)")
+        # 保存ボタン押した後の処理
+        if file_name != '':
+            np.savetxt(file_name,self.fourieMatrix)
         return
-        self.convexPoint = []
-        for index in self.HullPoints:
-            self.convexPoint.append([self.ContorBox[index][0],self.ContorBox[index][1]])
-        patch = patches.Polygon(xy = self.convexPoint,closed = True,alpha = 0.2) 
-        self.contor_axes.add_patch(patch)
-        self.updateContorFigure()
-        return
-    def constConvex(self,index):
-        return
-        self.HullPoints = self.ContorData.convex_hull(index)
-        print(self.HullPoints)
 
 
-    def showSelectedContor(self,ContorBox,index,kParameter):
-        return
-        self.contor_axes.cla()
-        selected_x = []
-        selected_y = []
-        for i in range(index-kParameter,index+kParameter):
-            if 0 <= i < len(ContorBox):
-                selected_x.append(ContorBox[i][0])
-                selected_y.append(ContorBox[i][1])
-        X = self.ContorBox[:,0]
-        Y = self.ContorBox[:,1]
-        self.anno = self.contor_axes.scatter(X,Y,c = 'blue',s=10)
-        self.contor_axes.scatter(selected_x,selected_y,c = 'red',s=10)
-        self.contor_axes.axis('off')
-        self.updateContorFigure()
-        return
-    
-        
-    def mouse_move(self,event):#ContorFigure Clicked Event
-        return
-        x = event.xdata
-        y = event.ydata
-        if event.inaxes != self.contor_axes or  self.anno == False:
-            return
-        cont,rev = self.anno.contains(event)
-        if not cont:
-            self.Output.setText('cannot calculate!')
-            return 
-        if cont:
-            self.kParameter = 16
-            if self.kParameterWidget.text().isdecimal():
-                self.kParameter = int(self.kParameterWidget.text())
-            self.Currentindex = rev['ind'][0]
-            self.showSelectedContor(self.ContorBox,self.Currentindex,self.kParameter)
-            self.showCalc(self.Currentindex)
-        if self.Currentindex >= len(self.ContorBox):
-            print('error')
-            return
-            
-    def showCalc(self,index):
-        return
-        self.VectorOutput_update(index)
-        maxArg = self.pca.calcMaxArg(index,self.kParameter)
-        if maxArg > 0.1:
-            self.Output.setStyleSheet('color: red')
-        else:
-            self.Output.setStyleSheet('color :white')
-        self.Output.setText(str(maxArg))
-        
-    def VectorOutput_update(self,index):
-        return
-        x = self.pca.revVector[index][0]
-        y = self.pca.revVector[index][1]
-        output_text = 'x:' + str(x)[:4] + 'y:' + str(y)[:4]
-        self.VectorOutput.setText(output_text)
-        
         
 def main():
     app = QtWidgets.QApplication(sys.argv)
