@@ -63,6 +63,10 @@ def loadNII(file_path): #return numpy array
     ndrev = sitk.GetArrayFromImage(image)
     return ndrev
 
+def getNAME(filepath):
+    tmp = filepath.split('/')
+    return tmp[-2]
+
 class Application(QtWidgets.QMainWindow):
     def __init__(self):
         # Call the inherited classes __init__ method
@@ -197,6 +201,10 @@ class Application(QtWidgets.QMainWindow):
         self.dataLength = max(self.dataLength-1,0)
         self.tableWidget.setRowCount(self.dataLength)
         return
+    
+    def deleteResult(self):
+        self.showResultWidget.setRowCount(0)
+        return
 
     def showDIALOG(self):
         self.NiiList.clear()
@@ -204,6 +212,7 @@ class Application(QtWidgets.QMainWindow):
         # 第二引数はダイアログのタイトル、第三引数は表示するパス
         fname = QFileDialog.getOpenFileName(self, 'Open file', './')
         FILEPATH = fname[0]
+        self.NAME = getNAME(FILEPATH)
         self.FileNameText.setText(FILEPATH)
         NII_Data = loadNII(FILEPATH)
         if len(NII_Data) > 0:
@@ -225,6 +234,7 @@ class Application(QtWidgets.QMainWindow):
         if index == '':
             return
         index = int(index)
+        self.NiiIndex = index
         self.NII_IMAGE= np.load(SAVE_PATH)[index]
         self.ContorData = ContorProduce(self.NII_IMAGE)#画像選択時にその輪郭データを作成
         for i in range(len(self.ContorData.contours)):
@@ -247,6 +257,7 @@ class Application(QtWidgets.QMainWindow):
         self.contor_axes.axis('off')
         self.updateContorFigure()
         self.delteRow(all=True)
+        self.deleteResult()
 
     def AnalizeFourie(self):
         #length = self.ContorData.culcArclength()
@@ -278,10 +289,17 @@ class Application(QtWidgets.QMainWindow):
                 self.showResultWidget.setItem(h,w,QTableWidgetItem(str(self.fourieMatrix[h][w])))
 
     def SaveAsCsv(self):
-        file_name, filters = QFileDialog.getSaveFileName(filter="CSV files (*.csv)")
-        # 保存ボタン押した後の処理
-        if file_name != '':
-            np.savetxt(file_name,self.fourieMatrix)
+        folderpath = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder')
+        featureMatrix = [[''] * 2 for _ in range(self.dataLength)]
+        for h in range(self.dataLength):
+            for w in range(2):
+                featureMatrix[h][w] = self.tableWidget.item(h,w).text()
+        tmp = folderpath + '/' + self.NAME + '-' + str(self.NiiIndex)
+        print(self.NAME)
+        print(tmp)
+        np.savetxt(tmp + '-fourie.csv',self.fourieMatrix)
+        np.savetxt(tmp +  '-feature.csv',featureMatrix)
+
         return
 
 
