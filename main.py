@@ -8,7 +8,7 @@ from Fourie import FourieMaster
 from scipy.spatial import ConvexHull
 from PyQt5.QtCore import Qt
 from PyQt5 import QtWidgets, uic, QtCore,QtGui
-from PyQt5.QtWidgets import QFileDialog,QMessageBox,QSlider
+from PyQt5.QtWidgets import QFileDialog,QMessageBox,QSlider,QTableWidgetItem
 import matplotlib as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
@@ -83,7 +83,11 @@ class Application(QtWidgets.QMainWindow):
         self.NiiList.currentIndexChanged.connect(lambda: self.showNii(self.NiiList.currentText()))
         self.ContorList.currentIndexChanged.connect(lambda: self.showContor(self.ContorList.currentText()))
         self.Button.clicked.connect(self.AnalizeFourie)
+        self.dataLength = 0#feature value set length
         self.saveButton.clicked.connect(self.SaveAsCsv)
+        self.addButton.clicked.connect(self.addRow)
+        self.deleteButton.clicked.connect(self.delteRow)
+        self.createTable()
         
     def initUI(self):
         self.resize(1400,800)#ウィンドウサイズの変更
@@ -94,7 +98,7 @@ class Application(QtWidgets.QMainWindow):
         self.FigureLayout.setContentsMargins(0,0,0,0)
         #Contorを表示するwidgetを追加
         self.ContorFigureWidget = QtWidgets.QWidget(self)
-        self.ContorFigureWidget.setGeometry(750,50,600,600)
+        self.ContorFigureWidget.setGeometry(700,50,400,400)
        #ContorWidget用のlayoutを追加 
         self.ContorFigureLayout = QtWidgets.QVBoxLayout(self.ContorFigureWidget)
         self.ContorFigureLayout.setContentsMargins(0,0,0,0)
@@ -115,19 +119,30 @@ class Application(QtWidgets.QMainWindow):
 
         self.Button = QtWidgets.QPushButton('Fourie',self)
         self.Button.setGeometry(820,10,100,30)
+
+        self.deleteButton = QtWidgets.QPushButton('delete',self)
+        self.deleteButton.setGeometry(1130,10,50,30)
+
+        self.addButton = QtWidgets.QPushButton('add',self)    
+        self.addButton.setGeometry(1300,10,50,30)
         
         self.saveButton = QtWidgets.QPushButton('save',self)
-        self.saveButton.setGeometry(1000,10,100,30)
+        self.saveButton.setGeometry(820,450,100,30)
 
         self.kParameterWidget = QtWidgets.QLineEdit(self)
         self.kParameterWidget.setGeometry(950,10,30,30)
 
+        self.tableWidget = QtWidgets.QTableWidget(self)
+        self.tableWidget.setGeometry(1130,50,250,400)
+
+        self.showResultWidget = QtWidgets.QTableWidget(self)
+        self.showResultWidget.setGeometry(700,500,680,200)
     def initSlider(self,vmax):
         self.sld = QtWidgets.QSlider(Qt.Vertical,self)
         self.sld.setMinimum(0)
         self.sld.setMaximum(vmax)
         self.sld.setFocusPolicy(Qt.NoFocus)
-        self.sld.setGeometry(650,50,20,600)
+        self.sld.setGeometry(630,50,20,600)
         self.sld.setValue(0)
         self.sld.setSingleStep(1)
         self.sld.valueChanged.connect(self.valueChange)
@@ -161,6 +176,27 @@ class Application(QtWidgets.QMainWindow):
     def updateContorFigure(self):
         self.ContorFigureCanvas.draw()
     
+    def createTable(self):
+        self.horHeaders = ['feature','value']
+        self.tableWidget.setColumnCount(len(self.horHeaders))
+        self.tableWidget.setHorizontalHeaderLabels(self.horHeaders)
+
+
+        return
+
+    def addRow(self):
+        self.tableWidget.setRowCount(self.dataLength + 1)
+        for w in range(2):
+            self.tableWidget.setItem(self.dataLength,w,QTableWidgetItem(''))
+        self.dataLength += 1
+        return
+
+    def delteRow(self,all = False):
+        if all:
+            self.dataLength = 0
+        self.dataLength = max(self.dataLength-1,0)
+        self.tableWidget.setRowCount(self.dataLength)
+        return
 
     def showDIALOG(self):
         self.NiiList.clear()
@@ -198,6 +234,7 @@ class Application(QtWidgets.QMainWindow):
         self.updateFigure()
         
     def showContor(self,index):#indexがstr型でくる
+        self.kParameterWidget.setText(str(30))
         self.Loaded = True
         self.contor_axes.cla()#前のplotデータの削除
         if index == '':
@@ -209,6 +246,7 @@ class Application(QtWidgets.QMainWindow):
         self.anno = self.contor_axes.scatter(X,Y,c='blue',s=10)
         self.contor_axes.axis('off')
         self.updateContorFigure()
+        self.delteRow(all=True)
 
     def AnalizeFourie(self):
         #length = self.ContorData.culcArclength()
@@ -216,12 +254,13 @@ class Application(QtWidgets.QMainWindow):
             return
         self.fourie = FourieMaster(self.ContorBox)
         self.fourie.constMatrix()
-        self.fourieMatrix = self.fourie.matrix
+        self.fourieMatrix = self.fourie.matrix.T
         K = int(self.kParameterWidget.text())
         if K >= len(self.ContorBox):
             return
         self.FouriePoint = self.fourie.reconstract(K)
         self.fouriePlot()
+        self.showFouireMatrix()
 
     def fouriePlot(self):
         self.contor_axes.cla()
@@ -230,6 +269,13 @@ class Application(QtWidgets.QMainWindow):
         self.contor_axes.scatter(X,Y,c='blue',s=10)
         self.contor_axes.axis('off')
         self.updateContorFigure()
+
+    def showFouireMatrix(self):
+        self.showResultWidget.setRowCount(self.fourieMatrix.shape[0])
+        self.showResultWidget.setColumnCount(self.fourieMatrix.shape[1])
+        for h in range(self.fourieMatrix.shape[0]):
+            for w in range(self.fourieMatrix.shape[1]):
+                self.showResultWidget.setItem(h,w,QTableWidgetItem(str(self.fourieMatrix[h][w])))
 
     def SaveAsCsv(self):
         file_name, filters = QFileDialog.getSaveFileName(filter="CSV files (*.csv)")
