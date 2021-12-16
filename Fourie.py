@@ -259,4 +259,19 @@ class FourieMaster:
         return rev
 
 
+    def calcPCA(self):
+        K = 4
+        rev = []
+        dim = 30
+        data = self.matrix.flatten()[3:4*dim]#fourier coeffs
+        eigenVector = np.array(np.load('eigenVector.npy'))
+        for i in range(K):
+            rev.append(calcScore(eigenVector,i,data))
+        return rev
+
+
+
+
         
+def calcScore(W,k,coeffs):#calc PCA score using kth eigen vector
+    return np.dot(W[:,k],coeffs)

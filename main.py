@@ -131,7 +131,7 @@ class Application(QtWidgets.QMainWindow):
         self.addButton.setGeometry(1300,10,50,30)
         
         self.saveButton = QtWidgets.QPushButton('save',self)
-        self.saveButton.setGeometry(820,450,100,30)
+        self.saveButton.setGeometry(750,450,100,30)
 
         self.kParameterWidget = QtWidgets.QLineEdit(self)
         self.kParameterWidget.setGeometry(950,10,30,30)
@@ -140,7 +140,11 @@ class Application(QtWidgets.QMainWindow):
         self.tableWidget.setGeometry(1130,50,250,400)
 
         self.showResultWidget = QtWidgets.QTableWidget(self)
-        self.showResultWidget.setGeometry(700,500,680,200)
+        self.showResultWidget.setGeometry(700,550,680,200)
+
+        self.pcaWidget = QtWidgets.QTableWidget(self)
+        self.pcaWidget.setGeometry(900,460,400,80)
+
     def initSlider(self,vmax):
         self.sld = QtWidgets.QSlider(Qt.Vertical,self)
         self.sld.setMinimum(0)
@@ -204,6 +208,7 @@ class Application(QtWidgets.QMainWindow):
     
     def deleteResult(self):
         self.showResultWidget.setRowCount(0)
+        self.pcaWidget.setRowCount(0)
         return
 
     def showDIALOG(self):
@@ -272,6 +277,7 @@ class Application(QtWidgets.QMainWindow):
         self.FouriePoint = self.fourie.reconstract(K)
         self.fouriePlot()
         self.showFouireMatrix()
+        self.showPCA_score()
 
     def fouriePlot(self):
         self.contor_axes.cla()
@@ -289,7 +295,10 @@ class Application(QtWidgets.QMainWindow):
                 self.showResultWidget.setItem(h,w,QTableWidgetItem(str(self.fourieMatrix[h][w])))
 
     def SaveAsCsv(self):
-        folderpath = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder')
+        #folderpath = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select Folder')
+        ####For research ###
+        folderpath = '/Users/dv/Desktop/FourieData'
+        ###For research ###
         featureMatrix = [[''] * 2 for _ in range(self.dataLength)]
         for h in range(self.dataLength):
             for w in range(2):
@@ -301,6 +310,17 @@ class Application(QtWidgets.QMainWindow):
         np.savetxt(tmp +  '-feature.csv',featureMatrix)
 
         return
+
+    def showPCA_score(self):
+        self.pca_score = np.array(self.fourie.calcPCA())
+        headers = ['pca1','pca2','pca3','pc4']
+        rowCount = 1
+        self.pcaWidget.setHorizontalHeaderLabels(headers)
+        print(self.pca_score)
+        self.pcaWidget.setRowCount(rowCount)
+        self.pcaWidget.setColumnCount(self.pca_score.shape[0])
+        for w in range(self.pca_score.shape[0]):
+            self.pcaWidget.setItem(0,w,QTableWidgetItem(str(self.pca_score[w])))
 
 
         
